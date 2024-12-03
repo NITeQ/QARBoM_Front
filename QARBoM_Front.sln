@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.11.35327.3
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "QARBoM_Front", "QARBoM_Front\QARBoM_Front.csproj", "{E12532A4-9EFC-4DA1-BC25-EB634564DFFD}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{E12532A4-9EFC-4DA1-BC25-EB634564DFFD}.Debug|Any CPU.ActiveCfg = Release|Any CPU
+		{E12532A4-9EFC-4DA1-BC25-EB634564DFFD}.Debug|Any CPU.Build.0 = Release|Any CPU
+		{E12532A4-9EFC-4DA1-BC25-EB634564DFFD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E12532A4-9EFC-4DA1-BC25-EB634564DFFD}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {20DFF5DF-8D3E-49AD-A740-0AD31C005DFF}
+	EndGlobalSection
+EndGlobal
