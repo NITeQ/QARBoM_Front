@@ -107,7 +107,7 @@ namespace QARBoM_Front.Components
 
         }
 
-        public async void UpdateListAuto(string data, bool updatePlot = true)
+        public void UpdateListAuto(string data, bool updatePlot = true)
         {
             if (string.IsNullOrEmpty(data)) return;
 
@@ -255,6 +255,24 @@ namespace QARBoM_Front.Components
                 default:
                     return null;
                     
+            }
+        }
+
+        public int GetIndex(string listName)
+        {
+            switch (listName)
+            {
+                case "Accuracy":
+                    return AccuracyIndex;
+                case "Precision":
+                    return PrecisionIndex;
+                case "Recall":
+                    return RecallIndex;
+                case "MSE":
+                    return MSEIndex;
+                default:
+                    return -1;
+
             }
         }
         public List<ScottPlot.Plottables.Signal> GetPlotList()

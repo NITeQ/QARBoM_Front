@@ -9,6 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Remove="Assets\Refresh.png" />
     <None Remove="Assets\Run.png" />
     <None Remove="Assets\Stop.png" />
     <None Remove="Resources\main_tcp_server.jl" />
@@ -27,8 +28,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Resource Include="Assets\Refresh.png" />
     <Resource Include="Assets\Run.png" />
     <Resource Include="Assets\Stop.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Presentations\" />
   </ItemGroup>
 
 </Project>

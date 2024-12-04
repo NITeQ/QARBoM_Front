@@ -15,7 +15,7 @@
 
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="285*" MaxWidth="285"/>
-            <ColumnDefinition Width="5*"/>
+            <ColumnDefinition Width="3*"/>
             <ColumnDefinition Width="689*"/>
             <ColumnDefinition Width="3*"/>
             <ColumnDefinition Width="282*"/>
@@ -30,7 +30,7 @@
         </Grid.RowDefinitions>
         <Menu VerticalAlignment="Top" Height="16">
             <MenuItem Header="Arquivo">
-                <MenuItem Header="Importar Excel" Click="ImportExcel_Click" />
+                <MenuItem x:Name="TabItemOpenFile" Header="Importar Excel" Click="ImportExcel_Click" />
             </MenuItem>
             <MenuItem Header="Themes">
                 <MenuItem Header="Avaliable Themes Below"/>
@@ -82,7 +82,13 @@
                     <Label Content="Halt"/>
                 </StackPanel>
             </Button>
-            <Button x:Name="Test" FontSize="10" DockPanel.Dock="Top" Click="TestButton" Width="50" Height="60" Margin="10,0,0,0" HorizontalAlignment="Left">
+            <Button x:Name="RefreshJuliaButton" FontSize="10" DockPanel.Dock="Top" Width="50" Height="60" Margin="10,0,0,0" HorizontalAlignment="Left" Click="RefreshJuliaButton_Click">
+                <StackPanel>
+                    <Image Source="/Assets/Refresh.png" Stretch="None"/>
+                    <Label Content="Refresh"/>
+                </StackPanel>
+            </Button>
+            <Button x:Name="GenericTestButton" FontSize="10" DockPanel.Dock="Top" Click="TestButton" Width="50" Height="60" Margin="10,0,0,0" HorizontalAlignment="Left">
                 <StackPanel>
                     <Label Content="Test"/>
                 </StackPanel>
@@ -190,8 +196,9 @@
 
         </GroupBox>
 
-        <GridSplitter Grid.Column="1" Grid.RowSpan="6" BorderThickness="1" HorizontalAlignment="Stretch" Margin="0,70,0,0"/>
-        <GridSplitter Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="4" BorderThickness="1" HorizontalAlignment="Stretch"/>
+        <GridSplitter Grid.Column="1" Grid.Row="1" Grid.RowSpan="6" BorderThickness="1" HorizontalAlignment="Stretch"/>
+        <GridSplitter Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="3" BorderThickness="1" HorizontalAlignment="Stretch"/>
+        <GridSplitter Grid.Column="3" Grid.Row="1" Grid.RowSpan="6" BorderThickness="1" HorizontalAlignment="Stretch"/>
 
         <TabControl Grid.Column="2" Grid.Row="1" Grid.RowSpan="3">
             <TabItem Header="Plot">
@@ -209,8 +216,6 @@
             </TabItem>
         </TabControl>
 
-
-
         <GridSplitter Grid.Row="4" Grid.Column="2" Grid.ColumnSpan="1" HorizontalAlignment="Stretch"/>
 
         <GroupBox Header="Output" Grid.Row="5" Grid.Column="2">
@@ -221,9 +226,13 @@
             </ScrollViewer>
         </GroupBox>
 
-        <GroupBox Header="Output" Grid.Column="4" Grid.RowSpan="6" Margin="0,70,0,0">
+        <GroupBox Header="Results" Grid.Column="4" Grid.RowSpan="6" Margin="0,70,0,0">
+            <DockPanel>
+                <DataGrid x:Name="DataGridResults" AutoGenerateColumns="True" 
+                          AutoGeneratingColumn="DataGridResults_AutoGeneratingColumn"
+                          HorizontalScrollBarVisibility="Auto" IsReadOnly="True"/>
 
-
+            </DockPanel>
         </GroupBox>
 
     </Grid>

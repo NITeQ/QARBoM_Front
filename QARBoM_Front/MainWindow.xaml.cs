@@ -40,14 +40,14 @@ namespace QARBoM_Front
             InitializeComponent();
             StartJuliaServer();
             InitializeGeneralPlot();
+            HoldInterfaceButtons();
             this.Closed += OnAppClosed;
         }
         private bool CancelRuntime = false;
 
         private List<Dictionary<string, object>>? MainGridDataRows;
-        private ScottPlot.Plottables.Signal? MSEPlot;
-        private ScottPlot.Plottables.Signal? AccuracyPlot;
-        private string PathCSVFolder = @"C:\\Users\\lucas\\OneDrive\\Documents\\PUC\\Stone\\";
+        private List<EpochResults>? EpochResultsList;
+        private List<string>? MetricsList;
 
         private int GlobalMaxTextSize = 500;
 
@@ -61,7 +61,7 @@ namespace QARBoM_Front
 
         #region Julia setup
 
-        private void StartJuliaServer()
+        private async void StartJuliaServer()
         {
             // Check if the server is already running by attempting to connect
             try
@@ -69,11 +69,7 @@ namespace QARBoM_Front
                 using (TcpClient client = new TcpClient("127.0.0.1", 2000))
                 {
                     // If we can connect, it means the server is already running
-
-
-
                     client.Close();
-
                     StartJuliaServer();
                     return;
                 }
@@ -83,18 +79,20 @@ namespace QARBoM_Front
 
                 //Lembrar de limpar arquivos temp
 
-                JuliaStartProcess();
+                HoldInterfaceButtons();
+                await Task.Run(() => StartJuliaProcess());
 
             }
         }
 
-        private void JuliaStartProcess()
+        private void StartJuliaProcess()
         {
-            if (juliaProcess != null)
-            {
-                MessageBox.Show("Julia Process is already running", "Warning", MessageBoxButton.OK, MessageBoxImage.Exclamation);
-                return;
-            }
+            //if (juliaProcess != null)
+            //{
+            //    Debug.WriteLine("HERE\n" + juliaProcess);
+            //    MessageBox.Show("Julia Process is already running", "Warning", MessageBoxButton.OK, MessageBoxImage.Exclamation);
+            //    return;
+            //}
 
             string tempPath = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "main_tcp_server.jl");
 
@@ -103,6 +101,7 @@ namespace QARBoM_Front
             {
                 if (stream != null) stream.CopyTo(fileStream);
             }
+
 
 
             // Server is not running, so we start it
@@ -130,26 +129,27 @@ namespace QARBoM_Front
             juliaProcess.BeginErrorReadLine();
         }
 
-        private void JuliaOutputReceived(object sender, DataReceivedEventArgs e)
+        private async void JuliaOutputReceived(object sender, DataReceivedEventArgs e)
         {
 
             if (e.Data != null)
             {
                 string printable = e.Data.ToString();
 
-                if (printable.Count() > 1000)
-                {
-
-                }
+                if (printable.Contains("Julia server is running on port")) ReleaseInterfaceButtons();
 
                 //Debug.WriteLine($"OUTPUT: {e.Data}");
 
-                Dispatcher.Invoke(() =>
+                await Dispatcher.BeginInvoke(() =>
                 {
                     ResultTextBlock.Text += e.Data + "\n";
                     ScrollCMD.ScrollToEnd();
 
-                    if (CG != null) CG.UpdateListAuto(e.Data);
+                    if (CG != null)
+                    {
+                        CG.UpdateListAuto(e.Data);
+                        UpdateResults(e.Data, 10);
+                    }
 
                     MainPlot.Refresh();
                 });
@@ -161,7 +161,7 @@ namespace QARBoM_Front
 
         private async Task ExecuteJuliaCommand(List<string> commands)
         {
-            if (juliaProcess == null) JuliaStartProcess();
+            if (juliaProcess == null) await Task.Run(() => StartJuliaProcess());
 
             int count = 1;
             foreach (var command in commands)
@@ -179,7 +179,7 @@ namespace QARBoM_Front
                     {
                         byte[] data = Encoding.UTF8.GetBytes(command + "\n");
                         await stream.WriteAsync(data, 0, data.Length);
-                        
+
 
                         StringBuilder responseBuilder = new StringBuilder();
                         byte[] buffer = new byte[256];
@@ -200,9 +200,17 @@ namespace QARBoM_Front
                         count++;
                     }
                 }
+                catch (IOException)
+                {
+                    MessageBox.Show("Julia process was interrupted.", "Information", MessageBoxButton.OK, MessageBoxImage.Information);
+
+                    HoldInterfaceButtons();
+                }
                 catch (Exception ex)
                 {
-                    MessageBox.Show("Error connecting to Julia server: " + ex.Message);
+                    MessageBox.Show(ex.GetType().ToString() + "\nError connecting to Julia server: " + ex.Message);
+
+                    HoldInterfaceButtons();
                 }
             }
         }
@@ -221,6 +229,8 @@ namespace QARBoM_Front
             string metrics = GenerateMetricsString();
             List<string> metricList = GenerateMetricsList(metrics);
 
+            MetricsList = metricList;
+            EpochResultsList = null;
             CG = new CurveGenerator(epochNumber, metricList, MainPlot);
 
             string trainType = RadioButtonClassification.IsChecked == true ? "RBMClassifier" : "RBM";
@@ -257,9 +267,6 @@ namespace QARBoM_Front
         }
         private async void ExecuteImportSubroutine(string pathPP, string pathAnswers)
         {
-
-
-
 
             string StonePPCommand = $"Dataset = DataFrame(CSV.File(raw\"{pathPP}\")); println(\"Data loaded. Rows: \", size(Dataset, 1), \", Columns: \", size(Dataset, 2));";
             string RespostasCommand = $"Y = DataFrame(CSV.File(raw\"{pathAnswers}\")); println(\"Data loaded. Rows: \", size(Y, 1), \", Columns: \", size(Y, 2));";
@@ -329,7 +336,7 @@ namespace QARBoM_Front
             // Open File Dialog to select file
             OpenFileDialog openPPDialog = new OpenFileDialog
             {
-                Filter = "Excel Files (*.xlsx)|*.xlsx|CSV Files (*.csv)|*.csv",
+                Filter = "CSV Files (*.csv)|*.csv|Excel Files (*.xlsx)|*.xlsx",
                 Title = "Select your PP file"
             };
 
@@ -342,7 +349,7 @@ namespace QARBoM_Front
 
             OpenFileDialog openAnswersDialog = new OpenFileDialog
             {
-                Filter = "Excel Files (*.xlsx)|*.xlsx|CSV Files (*.csv)|*.csv",
+                Filter = "CSV Files (*.csv)|*.csv|Excel Files (*.xlsx)|*.xlsx",
                 Title = "Select your Answers file"
             };
 
@@ -530,28 +537,95 @@ namespace QARBoM_Front
             return list;
         }
 
-        private void UpdateMainPlot(CurveGenerator generator, List<string> metrics)
+        private void UpdateResults(string data, int rankSize)
         {
-            if (MainPlot.Plot.PlottableList.Count == 0)
+            if (CG == null || MetricsList == null) return;
+            bool validData = false;
+            foreach (string metric in MetricsList)
             {
-                List<Signal> plots = generator.GetPlotList();
-
-                for (int i = 0; i < plots.Count; i++)
+                if ((data.ToLower()).Contains(metric.ToLower() + ':'))
                 {
-
+                    validData = true;
+                    break;
                 }
             }
+            if (!validData) return;
+            if (EpochResultsList == null) EpochResultsList = new();
 
-            foreach (string metric in metrics)
+            EpochResults epoch = new();
+            PropertyInfo[]? propertyList = typeof(EpochResults).GetProperties();
+            if (propertyList == null) return;
+
+            int index = CG.GetIndex("Accuracy");
+
+            foreach (string metric in MetricsList)
             {
-                if (metric == "Accuracy")
-                {
+                List<double>? currentMetricList = CG.GetList(metric);
+                if (currentMetricList == null) continue;
 
-                }
+                PropertyInfo? property = propertyList.Where(x => x.Name == metric).FirstOrDefault();
+                if (property == null) continue;
+                double val = currentMetricList.Where(x => x != 0).LastOrDefault();
+
+                property.SetValue(epoch, val);
+                if (index != -1) epoch.EpochNumber = index;
             }
+
+            if (EpochResultsList.Count < rankSize && (!EpochResultsList.Contains(epoch))) EpochResultsList.Add(epoch);
+            else if (EpochResultsList.Count >= rankSize)
+            {
+                if (epoch.CompareTo(EpochResultsList[^1]) == 1 && (!EpochResultsList.Contains(epoch))) EpochResultsList[^1] = epoch;
+            }
+
+
+            EpochResultsList = EpochResultsList.OrderByDescending(x => x.Accuracy).ToList();
+            DataGridResults.ItemsSource = EpochResultsList;
+            DataGridResults.Items.Refresh(); 
         }
 
+        private void HoldInterfaceButtons()
+        {
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                TabItemOpenFile.IsEnabled = false;
+                CallJuliaButton.IsEnabled = false;
+                CancelJuliaButton.IsEnabled = false;
+                GenericTestButton.IsEnabled = false;
+            });
 
+        }
+
+        private void ReleaseInterfaceButtons()
+        {
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                TabItemOpenFile.IsEnabled = true;
+                CallJuliaButton.IsEnabled = true;
+                CancelJuliaButton.IsEnabled = true;
+                GenericTestButton.IsEnabled = true;
+            }); 
+        }
+
+        private void TerminateJuliaProcess()
+        {
+            if (juliaProcess == null || juliaProcess.HasExited)
+            {
+                MessageBox.Show("No Julia process is running.", "Warning");
+                return;
+            }
+
+            try
+            {
+                juliaProcess.Kill();
+                juliaProcess.WaitForExit();
+                Dispatcher.Invoke(() => ResultTextBlock.Text = "Julia process terminated.");
+                
+            }
+            catch (Exception ex)
+            {
+                Dispatcher.Invoke(() => ResultTextBlock.Text = "Failed to terminate Julia process: " + ex.Message);
+            }
+        }
 
         #endregion
 
@@ -629,21 +703,38 @@ namespace QARBoM_Front
 
         private void CancelJuliaButton_Click(object sender, RoutedEventArgs e)
         {
-            if (juliaProcess == null || juliaProcess.HasExited)
-            {
-                MessageBox.Show("No Julia process is running.", "Warning");
-                return;
-            }
+            ResultTextBlock.Text = "Terminating Julia process...\n\n";
+            HoldInterfaceButtons();
+            TerminateJuliaProcess();
+            ResultTextBlock.Text += "\nAttempting to reconnect with Julia...\n\n";
+            StartJuliaProcess();
+            
+        }
 
-            try
+        private void RefreshJuliaButton_Click(object sender, RoutedEventArgs e)
+        {
+            HoldInterfaceButtons();
+            TerminateJuliaProcess();
+            ResultTextBlock.Text += "\n\nAttempting to reconnect with Julia...\n\n";
+            StartJuliaProcess();
+        }
+
+        private void DataGridResults_AutoGeneratingColumn(object sender, DataGridAutoGeneratingColumnEventArgs e)
+        {
+            if (e.PropertyType == typeof(double) || e.PropertyType == typeof(float) || e.PropertyType == typeof(decimal))
             {
-                juliaProcess.Kill();
-                juliaProcess.WaitForExit();
-                ResultTextBlock.Text = "Julia process terminated.";
-            }
-            catch (Exception ex)
-            {
-                ResultTextBlock.Text = "Failed to terminate Julia process: " + ex.Message;
+                // Create a new DataGridTextColumn with formatting
+                var textColumn = new DataGridTextColumn
+                {
+                    Header = e.Column.Header,
+                    Binding = new Binding(e.PropertyName)
+                    {
+                        StringFormat = "F6" // Two decimal places
+                    }
+                };
+
+                // Replace the auto-generated column
+                e.Column = textColumn;
             }
         }
     }
